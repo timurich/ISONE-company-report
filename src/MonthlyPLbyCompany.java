@@ -101,7 +101,7 @@ public class MonthlyPLbyCompany {
 			        // use comma as separator
 				String[] transaction  = line.split(",");	 
 				if(transaction[8].equals("BUY")) {
-					paths.add(new ftrPath(transaction[2],transaction[4],transaction[7],Double.parseDouble(transaction[10])));
+					paths.add(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])));
 				}
 			}	 
 		} catch (FileNotFoundException e) {
@@ -157,7 +157,7 @@ public class MonthlyPLbyCompany {
 			if(splittedLine[2].equals("MCC")){
 				for(int i=3, k=0; i<=26; i++, k++)
 					prices[k] = Double.parseDouble(splittedLine[i]);
-				paths_prices.put(splittedLine[0],prices);
+				paths_prices.put(splittedLine[27],prices);
 			//	System.out.println(splittedLine[0]+" : "+Arrays.toString(paths_prices.get(splittedLine[0])));
 			//	in.nextLine();
 			}
