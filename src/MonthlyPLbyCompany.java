@@ -62,8 +62,11 @@ public class MonthlyPLbyCompany {
 		System.out.println("=========================================================");
 		CalculatePL_of_AllPathsForGivenMonth(year, month, pathsPL);
 		//System.out.println("=========================================================");
-		//System.out.println(pathsPL[0].)
-		
+		System.out.println(pathsPL.length);
+		System.out.println(pathsPL[0].getPath().getSource()+" --> "+ pathsPL[0].getPath().getSink()+"("+ pathsPL[0].getPath().getType()+")"+" = "+ pathsPL[0].getPathTotalPL()+" "+ pathsPL[0].getAllDaysPL());		
+		System.out.println(pathsPL[2000].getPath().getSource()+" --> "+ pathsPL[2000].getPath().getSink()+"("+ pathsPL[2000].getPath().getType()+")"+" = "+ pathsPL[2000].getPathTotalPL()+" "+ pathsPL[2000].getAllDaysPL());
+		System.out.println(pathsPL[110].getPath().getSource()+" --> "+ pathsPL[110].getPath().getSink()+"("+ pathsPL[110].getPath().getType()+")"+" = "+ pathsPL[110].getPathTotalPL()+" "+ pathsPL[110].getAllDaysPL());		
+		System.out.println(pathsPL[2200].getPath().getSource()+" --> "+ pathsPL[2200].getPath().getSink()+"("+ pathsPL[2200].getPath().getType()+")"+" = "+ pathsPL[2200].getPathTotalPL()+" "+ pathsPL[2200].getAllDaysPL());
 	}
 
 	public static ArrayList <ftrAuctionResFile> getAllFTRAuctionFiles() {
@@ -125,17 +128,18 @@ public class MonthlyPLbyCompany {
 		Path dir = Paths.get("/ISONE/ISONE_DA_RT_FTR_Prices/Daily_DA_Prices");
 		String fileName = "";		
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "WW_DALMP_ISO_"+year+month+"*")) {
-			//int zzz = 1;
+			int zzz = 0;
 			for (Path entry: stream) {				
-		        fileName = entry.getFileName().toString();		        
-		        System.out.println(fileName);
+		        fileName = entry.getFileName().toString();
+		        zzz++;
+		        System.out.print(fileName+"  ");
+		        if(zzz == 5) {System.out.println(); zzz=0;}
 		        getAllPathPricesForDay(fileName, pathsPL);
-		       //zzz++;
-		       //if(zzz>=1)break;//////////////////////////////////////////////////////////
 		    }
 		} catch (IOException x) {
 		    System.err.println(x);
 		}		
+		System.out.println("\n");
 	}
 	
 	public static void getAllPathPricesForDay(String fileName, PathPL pathsPL[]) throws IOException{		
@@ -177,13 +181,13 @@ public class MonthlyPLbyCompany {
 		int xxx = 0;
 		for(int p=0; p < pathsPL.length; p++) {
 			if(paths_prices.get(pathsPL[p].getPath().getSource())==null) {
-				System.out.println(pathsPL[p].getPath().getSource()+" not found !!!!!!!!!!!!!!!!!!");
+				//System.out.println(pathsPL[p].getPath().getSource()+" not found !!!!!!!!!!!!!!!!!!");
 				pathsPL[p].addDailyPL(0.0);
 				xxx++;
 				continue;
 			}
 			if(paths_prices.get(pathsPL[p].getPath().getSink())==null) {
-				System.out.println(pathsPL[p].getPath().getSink()+" not found !!!!!!!!!!!!!!!!!!");
+				//System.out.println(pathsPL[p].getPath().getSink()+" not found !!!!!!!!!!!!!!!!!!");
 				pathsPL[p].addDailyPL(0.0);
 				xxx++;
 				continue;
@@ -200,22 +204,22 @@ public class MonthlyPLbyCompany {
 			double sum = 0;
 			if(pathsPL[p].getPath().getType().equals("ONPEAK") && NERCHoliday == false && weekend == false) {
 				//System.out.println("                        Match 1");
-				for(int i=7; i<=22; i++) { // OnPeak // no holiday (hours: 8 - 23) 
+				for(int i=7; i<=22; i++) {    // OnPeak // no holiday (hours: 8 - 23) 
 					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];
 				}
 			}
-			else if(pathsPL[p].getPath().getType().equals("ONPEAK") && (NERCHoliday == true || weekend == true)){
+			else if(pathsPL[p].getPath().getType().equals("ONPEAK") && (NERCHoliday == true || weekend == true)) {
 				//System.out.println("                        Match 2");
 				sum = 0;  // no PL for OnPeak paths during weekends and NERD holidays
 			}
-			else if(pathsPL[p].getPath().getType().equals("OFFPEAK") && NERCHoliday == false && weekend == false){
+			else if(pathsPL[p].getPath().getType().equals("OFFPEAK") && NERCHoliday == false && weekend == false) {
 				//System.out.println("                        Match 3");
 				for(int i=0; i<=6; i++) { // OffPeak during week days and no holidays
-					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];
-					sum += paths_prices.get(pathsPL[p].getPath().getSink())[23] - paths_prices.get(pathsPL[p].getPath().getSource())[23]; // 24th hour
+					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];					
 				}								
+				sum += paths_prices.get(pathsPL[p].getPath().getSink())[23] - paths_prices.get(pathsPL[p].getPath().getSource())[23]; // 24th hour
 			}
-			else if(pathsPL[p].getPath().getType().equals("OFFPEAK") && (NERCHoliday == true || weekend == true)){
+			else if(pathsPL[p].getPath().getType().equals("OFFPEAK") && (NERCHoliday == true || weekend == true)) {
 				//System.out.println("                        Match 4");
 				for(int i=0; i<=23; i++) { // OffPeak during holidays and weekends (hours: 1 - 24) 
 					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];
@@ -226,8 +230,8 @@ public class MonthlyPLbyCompany {
 			pathsPL[p].addDailyPL(sum);
 			//if(p%500==0) System.out.println("                                         Paths calculated: "+p);
 		}
-		System.out.println("name mismatches: "+xxx);
-		System.out.println("============================================");
+		//System.out.println("name mismatches: "+xxx);
+		//System.out.println("============================================");
 	}
 	
 	public static void getAllCompaniesPL(){
