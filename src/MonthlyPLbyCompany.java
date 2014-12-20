@@ -39,29 +39,67 @@ public class MonthlyPLbyCompany {
 			} else right = true;
 		} while(!right);
 		if(month.length() < 2) month = "0"+month;
-		in.close();
-		String requestedFile = "";
+		
+		String requestedFtrFile = "";
 		ArrayList <ftrAuctionResFile> files = getAllFTRAuctionFiles();
 		for(int i = 0; i < files.size(); i++) {
 			if(files.get(i).getYear().equals(year) && files.get(i).getMonth().equals(month))
-				requestedFile = files.get(i).getName();
+				requestedFtrFile = files.get(i).getName();
 		}
-		System.out.println("===> "+requestedFile);
+		System.out.println();
+		System.out.println("FTR Auction Result File : "+requestedFtrFile);
 		///////////////////Reading all paths for given month		
-		Map <ftrPath, ArrayList<Double>> paths = CreateListOfAllPathsFor1month(requestedFile); // set of All unique paths for the month (FTR)		
-		System.out.println("!!!!! number of unique paths for the month = "+paths.size());
+		Map <ftrPath, ArrayList<Double>> paths = CreateListOfAllPathsFor1month(requestedFtrFile); // set of All unique paths for the month (FTR)		
+		System.out.println("\nNumber of unique paths for the month = "+paths.size());
 		
 		System.out.println("=========================================================");
 		CalculatePL_of_AllPathsForGivenMonth(year, month, paths);
-		//System.out.println("=========================================================");
-		System.out.println(paths.size());
+		System.out.println("=========================================================");		
 		int temp = 1;		
-		for(ftrPath key: paths.keySet()) {	
-			System.out.println(key.toString()+" = "+ key.getPathTotalPL()+" "+ key.getAllDaysPL());
-			temp++;
-			if(temp == 10) break;			
+		for(ftrPath key: paths.keySet()) {
+			if(key.getPathTotalPL()>50 && key.getPathTotalPL() / key.getFtrPrice() > 1.5){
+				System.out.println(key.toString()+", "+ key.getAllDaysPL()+"\t = "+ key.getPathTotalPL());
+				temp++;
+			}
+						
 		}
+		System.out.println("Paths found: "+ temp);
+		System.out.print("Report of all companies' P/L for this month? [y]es/[n]o");
+		char ans = in.nextLine().charAt(0);
+		if(ans == 'Y' || ans == 'y')
+			MonthlyReport_CompaniesPL(requestedFtrFile, paths);
+		else
+			System.out.println("End of program.");
 		
+		in.close();//System.in
+	}
+	
+	public static void MonthlyReport_CompaniesPL(String file, Map <ftrPath, ArrayList<Double>> paths){
+		String ftrFile = "C:/ISONE/FTR_Positions/FTR_Bid_Results/"+file;		
+		BufferedReader br = null;
+		String line = "";		
+		try {			 
+			br = new BufferedReader(new FileReader(ftrFile));			
+			while ((line = br.readLine()) != null) {	 
+			        // use comma as separator
+				String[] transaction  = line.split(",");	 
+				if(transaction[8].equals("BUY")) {             // Map keys can only be unique, so the paths will be unique
+					paths.put(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])),null);
+				}
+			}	 
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			if (br != null) {
+				try {
+					br.close();					
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}	 
 	}
 
 	public static ArrayList <ftrAuctionResFile> getAllFTRAuctionFiles() {
@@ -173,19 +211,19 @@ public class MonthlyPLbyCompany {
 			
 			if(nodes_prices.get(source)==null) {
 				//System.out.println(pathsPL[p].getPath().getSource()+" not found !!!!!!!!!!!!!!!!!!");
-				paths.get(key).add(0.0);
+				key.addDailyPL(0.0);
 				xxx = xxx + 1;
 				continue;
 			}
 			if(nodes_prices.get(sink)==null) {
 				//System.out.println(pathsPL[p].getPath().getSink()+" not found !!!!!!!!!!!!!!!!!!");
-				paths.get(key).add(0.0);
+				key.addDailyPL(0.0);
 				xxx = xxx + 1;
 				continue;
 			}
 					
-			boolean NERCHoliday = NERCHolidaysQ(year,month,day);
-			boolean weekend = WeekendQ(year,month,day);
+			boolean NERCHoliday = Util.NERCHolidaysQ(year,month,day);
+			boolean weekend = Util.WeekendQ(year,month,day);
 			
 			double sum = 0;
 			if(type.equals("ONPEAK") && NERCHoliday == false && weekend == false) {
@@ -217,38 +255,5 @@ public class MonthlyPLbyCompany {
 		}
 		//System.out.println("name mismatches: "+xxx);
 		//System.out.println("============================================");
-	}
-	
-	public static void getAllCompaniesPL(){
-		
-	}
-	
-	public static boolean WeekendQ(int year, int month, int day) {		
-		Calendar calendar = new GregorianCalendar(year, month-1, day);
-		int dayOfWeek  = calendar.get(Calendar.DAY_OF_WEEK);
-		if(dayOfWeek < 2 || dayOfWeek > 6)  // Saturday, Sunday
-			return true;
-		else
-			return false;
-			
-	}
-	
-	public static boolean NERCHolidaysQ(int year, int month, int day) {					
-		Calendar calendar = new GregorianCalendar(year, month-1, day);
-		int dayOfWeek  = calendar.get(Calendar.DAY_OF_WEEK);
-		int dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH);		
-		if(month == 1 && day == 1)         // New Year
-			return true;
-		if(month == 7 && day == 4)		   // Independence Day
-			return true;
-		if(month == 12 && day == 25)	   // Christmas
-			return true;
-		if(month == 5 && dayOfMonth >= 25 && dayOfWeek == 2 ) // Memorial Day			
-			return true;
-		if(month == 9 && dayOfMonth <=7 && dayOfWeek == 2 )   // Labor Day			
-			return true;
-		if(month == 11 && dayOfMonth >=22 && dayOfWeek == 5 ) // Thanksgiving			
-			return true;					
-		return false;
 	}
 }
