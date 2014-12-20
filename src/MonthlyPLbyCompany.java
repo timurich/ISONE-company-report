@@ -48,25 +48,20 @@ public class MonthlyPLbyCompany {
 		}
 		System.out.println("===> "+requestedFile);
 		///////////////////Reading all paths for given month		
-		Set <ftrPath> paths = new HashSet<ftrPath>();
-		paths = CreateListOfAllPathsFor1month(requestedFile); // set of All unique paths for the month (FTR)		
-		PathPL [] pathsPL = new PathPL[paths.size()];
-		Iterator <ftrPath> setAccess = paths.iterator();
-		for(int i = 0; i < pathsPL.length; i++) {
-			pathsPL[i] = new PathPL(setAccess.next());       // array of All unique purchased paths for given month
-		}
-		System.out.println("!!!!! number of unique paths for the month = "+pathsPL.length);
-		//System.out.println(pathsPL[0].getPath().getSource()+" --> "+pathsPL[0].getPath().getSink()+" | "+pathsPL[0].getPath().getType()+" | "+
-		//					pathsPL[0].getDailyPL(0)+", total PL = "+pathsPL[0].getPathTotalPL());
+		Map <ftrPath, ArrayList<Double>> paths = CreateListOfAllPathsFor1month(requestedFile); // set of All unique paths for the month (FTR)		
+		System.out.println("!!!!! number of unique paths for the month = "+paths.size());
 		
 		System.out.println("=========================================================");
-		CalculatePL_of_AllPathsForGivenMonth(year, month, pathsPL);
+		CalculatePL_of_AllPathsForGivenMonth(year, month, paths);
 		//System.out.println("=========================================================");
-		System.out.println(pathsPL.length);
-		System.out.println(pathsPL[0].getPath().getSource()+" --> "+ pathsPL[0].getPath().getSink()+"("+ pathsPL[0].getPath().getType()+")"+" = "+ pathsPL[0].getPathTotalPL()+" "+ pathsPL[0].getAllDaysPL());		
-		System.out.println(pathsPL[2000].getPath().getSource()+" --> "+ pathsPL[2000].getPath().getSink()+"("+ pathsPL[2000].getPath().getType()+")"+" = "+ pathsPL[2000].getPathTotalPL()+" "+ pathsPL[2000].getAllDaysPL());
-		System.out.println(pathsPL[110].getPath().getSource()+" --> "+ pathsPL[110].getPath().getSink()+"("+ pathsPL[110].getPath().getType()+")"+" = "+ pathsPL[110].getPathTotalPL()+" "+ pathsPL[110].getAllDaysPL());		
-		System.out.println(pathsPL[2200].getPath().getSource()+" --> "+ pathsPL[2200].getPath().getSink()+"("+ pathsPL[2200].getPath().getType()+")"+" = "+ pathsPL[2200].getPathTotalPL()+" "+ pathsPL[2200].getAllDaysPL());
+		System.out.println(paths.size());
+		int temp = 1;		
+		for(ftrPath key: paths.keySet()) {	
+			System.out.println(key.toString()+" = "+ key.getPathTotalPL()+" "+ key.getAllDaysPL());
+			temp++;
+			if(temp == 10) break;			
+		}
+		
 	}
 
 	public static ArrayList <ftrAuctionResFile> getAllFTRAuctionFiles() {
@@ -92,8 +87,8 @@ public class MonthlyPLbyCompany {
 		return files;
 	}
 	
-	public static Set <ftrPath> CreateListOfAllPathsFor1month(String file) {	
-		Set <ftrPath> paths = new HashSet<ftrPath>();
+	public static Map <ftrPath, ArrayList<Double>> CreateListOfAllPathsFor1month(String file) {	
+		Map <ftrPath,ArrayList<Double>> paths = new HashMap<ftrPath, ArrayList<Double>>();
 		String csvFile = "C:/ISONE/FTR_Positions/FTR_Bid_Results/"+file;		
 		BufferedReader br = null;
 		String line = "";		
@@ -103,8 +98,8 @@ public class MonthlyPLbyCompany {
 			while ((line = br.readLine()) != null) {	 
 			        // use comma as separator
 				String[] transaction  = line.split(",");	 
-				if(transaction[8].equals("BUY")) {
-					paths.add(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])));
+				if(transaction[8].equals("BUY")) {             // Map keys can only be unique, so the paths will be unique
+					paths.put(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])),null);
 				}
 			}	 
 		} catch (FileNotFoundException e) {
@@ -123,7 +118,7 @@ public class MonthlyPLbyCompany {
 		return paths;
 	}
 
-	public static void CalculatePL_of_AllPathsForGivenMonth(String year, String month, PathPL pathsPL[]) {			
+	public static void CalculatePL_of_AllPathsForGivenMonth(String year, String month, Map<ftrPath, ArrayList<Double>> paths) {			
 			
 		Path dir = Paths.get("/ISONE/ISONE_DA_RT_FTR_Prices/Daily_DA_Prices");
 		String fileName = "";		
@@ -134,7 +129,7 @@ public class MonthlyPLbyCompany {
 		        zzz++;
 		        System.out.print(fileName+"  ");
 		        if(zzz == 5) {System.out.println(); zzz=0;}
-		        getAllPathPricesForDay(fileName, pathsPL);
+		        getAllPathPricesForDay(fileName, paths);
 		    }
 		} catch (IOException x) {
 		    System.err.println(x);
@@ -142,13 +137,13 @@ public class MonthlyPLbyCompany {
 		System.out.println("\n");
 	}
 	
-	public static void getAllPathPricesForDay(String fileName, PathPL pathsPL[]) throws IOException{		
+	public static void getAllPathPricesForDay(String fileName, Map<ftrPath, ArrayList<Double>> paths) throws IOException{		
 		String fName = "C:/ISONE/ISONE_DA_RT_FTR_Prices/Daily_DA_Prices/"+fileName;
         int year = Integer.parseInt(fileName.substring(13,17));
         int month = Integer.parseInt(fileName.substring(17,19));
         int day = Integer.parseInt(fileName.substring(19,21));        
 		   ///// getting all paths prices for the day
-		Map<String, double[]> paths_prices = new HashMap<String, double[]>();
+		Map<String, double[]> nodes_prices = new HashMap<String, double[]>();  // Map of all NODES with their prices for a day
 		Scanner in = new Scanner(System.in);
 		BufferedReader inStream = new BufferedReader(new FileReader(fName));
 		String line = "";		
@@ -161,74 +156,64 @@ public class MonthlyPLbyCompany {
 			if(splittedLine[2].equals("MCC")){
 				for(int i=3, k=0; i<=26; i++, k++)
 					prices[k] = Double.parseDouble(splittedLine[i]);
-				paths_prices.put(splittedLine[27],prices);
-			//	System.out.println(splittedLine[0]+" : "+Arrays.toString(paths_prices.get(splittedLine[0])));
-			//	in.nextLine();
+				nodes_prices.put(splittedLine[27],prices);			
 			}
 		}
-		inStream.close();
-		
-//		Set<String> keys = paths_prices.keySet();		
-//		double[] value = null;
-//		for(Iterator<String> z = keys.iterator(); z.hasNext();) {
-//			String key = (String) z.next();
-//			value = (double[])paths_prices.get(key);
-//			//System.out.println(key+" : "+Arrays.toString(value));
-//			//in.nextLine();
-//		}
+		inStream.close();	
+
 		in.close();
 				
-		int xxx = 0;
-		for(int p=0; p < pathsPL.length; p++) {
-			if(paths_prices.get(pathsPL[p].getPath().getSource())==null) {
-				//System.out.println(pathsPL[p].getPath().getSource()+" not found !!!!!!!!!!!!!!!!!!");
-				pathsPL[p].addDailyPL(0.0);
-				xxx++;
-				continue;
-			}
-			if(paths_prices.get(pathsPL[p].getPath().getSink())==null) {
-				//System.out.println(pathsPL[p].getPath().getSink()+" not found !!!!!!!!!!!!!!!!!!");
-				pathsPL[p].addDailyPL(0.0);
-				xxx++;
-				continue;
-			}
-			/////System.out.print(pathsPL[p].getPath().getSource()+" ===> "+pathsPL[p].getPath().getSink()+" : sum = ");
-			//System.out.println(pathsPL[0].getPath().getSource()+" : "+ Arrays.toString(paths_prices.get(pathsPL[0].getPath().getSource())));
-			//System.out.println(pathsPL[0].getPath().getSink()+" : "+ Arrays.toString(paths_prices.get(pathsPL[0].getPath().getSink())));
-			//System.out.println(pathsPL[0].getPath().getType());
+		int xxx = 0;		
+		
+		for(ftrPath key: paths.keySet()) 
+		{
+			String source = key.getSource();
+			String sink = key.getSink();
+			String type = key.getType();
 			
+			if(nodes_prices.get(source)==null) {
+				//System.out.println(pathsPL[p].getPath().getSource()+" not found !!!!!!!!!!!!!!!!!!");
+				paths.get(key).add(0.0);
+				xxx = xxx + 1;
+				continue;
+			}
+			if(nodes_prices.get(sink)==null) {
+				//System.out.println(pathsPL[p].getPath().getSink()+" not found !!!!!!!!!!!!!!!!!!");
+				paths.get(key).add(0.0);
+				xxx = xxx + 1;
+				continue;
+			}
 					
 			boolean NERCHoliday = NERCHolidaysQ(year,month,day);
 			boolean weekend = WeekendQ(year,month,day);
 			
 			double sum = 0;
-			if(pathsPL[p].getPath().getType().equals("ONPEAK") && NERCHoliday == false && weekend == false) {
+			if(type.equals("ONPEAK") && NERCHoliday == false && weekend == false) {
 				//System.out.println("                        Match 1");
 				for(int i=7; i<=22; i++) {    // OnPeak // no holiday (hours: 8 - 23) 
-					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];
+					sum += nodes_prices.get(sink)[i] - nodes_prices.get(source)[i];
 				}
 			}
-			else if(pathsPL[p].getPath().getType().equals("ONPEAK") && (NERCHoliday == true || weekend == true)) {
+			else if(type.equals("ONPEAK") && (NERCHoliday == true || weekend == true)) {
 				//System.out.println("                        Match 2");
 				sum = 0;  // no PL for OnPeak paths during weekends and NERD holidays
 			}
-			else if(pathsPL[p].getPath().getType().equals("OFFPEAK") && NERCHoliday == false && weekend == false) {
+			else if(type.equals("OFFPEAK") && NERCHoliday == false && weekend == false) {
 				//System.out.println("                        Match 3");
 				for(int i=0; i<=6; i++) { // OffPeak during week days and no holidays
-					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];					
+					sum += nodes_prices.get(sink)[i] - nodes_prices.get(source)[i];					
 				}								
-				sum += paths_prices.get(pathsPL[p].getPath().getSink())[23] - paths_prices.get(pathsPL[p].getPath().getSource())[23]; // 24th hour
+				sum += nodes_prices.get(sink)[23] - nodes_prices.get(source)[23]; // 24th hour
 			}
-			else if(pathsPL[p].getPath().getType().equals("OFFPEAK") && (NERCHoliday == true || weekend == true)) {
+			else if(type.equals("OFFPEAK") && (NERCHoliday == true || weekend == true)) {
 				//System.out.println("                        Match 4");
 				for(int i=0; i<=23; i++) { // OffPeak during holidays and weekends (hours: 1 - 24) 
-					sum += paths_prices.get(pathsPL[p].getPath().getSink())[i] - paths_prices.get(pathsPL[p].getPath().getSource())[i];
+					sum += nodes_prices.get(sink)[i] - nodes_prices.get(source)[i];
 				}
 			}
 			sum = Math.round(sum*100)/100.0;		
 			//System.out.println(sum);
-			pathsPL[p].addDailyPL(sum);
-			//if(p%500==0) System.out.println("                                         Paths calculated: "+p);
+			key.addDailyPL(sum); 
 		}
 		//System.out.println("name mismatches: "+xxx);
 		//System.out.println("============================================");

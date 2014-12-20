@@ -1,16 +1,40 @@
+import java.util.ArrayList;
+
 public class ftrPath 
 {
 	private String source;
 	private String sink;
 	private String type;	
 	private double ftrPrice;
+	private ArrayList<Double>dailyPL; // up to 31 days
 	
  	public ftrPath(String source, String sink, String type, double price) {	
 		this.source = source;
 		this.sink = sink;
 		this.type = type;	
 		ftrPrice = price;
+		dailyPL = new ArrayList<Double>();
 	}
+ 	
+ 	public void addDailyPL(Double x) {
+ 		dailyPL.add(x);
+ 	}
+ 	
+ 	public double getDailtyPL(int index) {
+ 		return (double) dailyPL.get(index);
+ 	}
+ 	
+ 	public String getAllDaysPL() {
+ 		return dailyPL.toString();
+ 	}
+ 	
+ 	public double getPathTotalPL() {
+ 		double sum = 0;
+ 		for(int i = 0; i < dailyPL.size(); i++)
+ 			sum+=dailyPL.get(i);
+ 		return Math.round(sum*100)/100.0;
+ 	}
+ 	
 	public String getSource() {
 		return source;
 	}
@@ -34,6 +58,11 @@ public class ftrPath
 	}
 	public double getFtrPrice(){
 		return ftrPrice;
+	}
+	
+	@Override
+	public String toString(){
+		return source+" --> "+sink+" ("+type+"), $"+ftrPrice+"/MW";
 	}
 	
 	@Override
