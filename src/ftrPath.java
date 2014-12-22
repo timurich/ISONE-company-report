@@ -24,8 +24,12 @@ public class ftrPath
  		return (double) dailyPL.get(index);
  	}
  	
- 	public String getAllDaysPL() {
+ 	public String getAllDaysPLstring() {
  		return dailyPL.toString();
+ 	}
+ 	
+ 	public ArrayList<Double> getAllDaysPL() {
+ 		return dailyPL;
  	}
  	
  	public double getPathTotalPL() {
@@ -64,7 +68,7 @@ public class ftrPath
 	public String toString(){
 		return source+" --> "+sink+" ("+type+"), $"+ftrPrice+"/MW";
 	}
-	
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -74,6 +78,7 @@ public class ftrPath
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -99,5 +104,5 @@ public class ftrPath
 		} else if (!type.equals(other.type))
 			return false;
 		return true;
-	}	
+	}
 }

@@ -15,6 +15,7 @@ public class MonthlyPLbyCompany {
 	{
 		System.out.println("Report: Market Participants PL For a Certain Month.");
 		System.out.println();
+		@SuppressWarnings("resource")
 		Scanner in = new Scanner(System.in);
 		String year;
 		String month;
@@ -54,39 +55,119 @@ public class MonthlyPLbyCompany {
 		
 		System.out.println("=========================================================");
 		CalculatePL_of_AllPathsForGivenMonth(year, month, paths);
-		System.out.println("=========================================================");		
-		int temp = 1;		
+		System.out.println("=========================================================");
+		//int temp = 0;
+		BufferedWriter bw = new BufferedWriter(new FileWriter("C:/ISONE/Monthly_Paths_PL.csv"));  
+		bw.write("sourceID,sinkID,Class,Price,Total P/L for month,");
+		int h = 0;
+		for(h = 1; h <= Util.getNumberOfDaysInMonth(year,month)-1; h++) bw.write("Day"+h+","); bw.write("Day"+h); //to avoid last comma)		
+		bw.newLine();
 		for(ftrPath key: paths.keySet()) {
-			if(key.getPathTotalPL()>50 && key.getPathTotalPL() / key.getFtrPrice() > 1.5){
-				System.out.println(key.toString()+", "+ key.getAllDaysPL()+"\t = "+ key.getPathTotalPL());
-				temp++;
-			}
+			//if(key.getPathTotalPL()>50 && key.getPathTotalPL() / key.getFtrPrice() > 1.5) { // FILTER 
+			//	System.out.println(key.toString()+", "+ key.getAllDaysPLstring()+"\t = "+ key.getPathTotalPL());
+			
+				ArrayList<Double> dailyPLs = key.getAllDaysPL();			
+				String writeString = "";
+				writeString += key.getSource() +","+ key.getSink()+","+key.getType()+","+key.getFtrPrice()+","+key.getPathTotalPL()+",";
+				for(int i = 0; i<dailyPLs.size(); i++)
+					writeString += dailyPLs.get(i)+",";				
+				bw.write(writeString.substring(0,writeString.length()-1));
+				bw.newLine();
+			//	temp++;
+			//}
 						
 		}
-		System.out.println("Paths found: "+ temp);
-		System.out.print("Report of all companies' P/L for this month? [y]es/[n]o");
+		bw.close();
+	//	System.out.println("Paths found: "+ temp);
+		System.out.println();
+		System.out.print("Report of all companies' P/L for this month? [y]es/[n]o ==> ");		
 		char ans = in.nextLine().charAt(0);
-		if(ans == 'Y' || ans == 'y')
-			MonthlyReport_CompaniesPL(requestedFtrFile, paths);
+		if(ans == 'Y' || ans == 'y') 
+		{
+			Map<String, Company> companies = MonthlyReport_CompaniesPL(requestedFtrFile, paths);			
+			int x = 0;
+			BufferedWriter bw2 = new BufferedWriter(new FileWriter("C:/ISONE/Monthly_Companies_PL_Report.csv"));
+			bw2.write("Company,# of paths,total MWs,Capital Spent,Total P/L");
+			bw2.newLine();
+			String writeString = "";
+			for(String key: companies.keySet()) 
+			{	
+				writeString = "";
+				System.out.println(++x+". "+key);
+				writeString += key+",";
+				ArrayList<ftrPath> companyPaths = companies.get(key).getPaths();
+				System.out.println("\t\tNumber of paths: "+companyPaths.size());
+				writeString += companyPaths.size()+",";
+				System.out.println("\t\tTotal MWs purchased: "+companies.get(key).getMWs());
+				writeString += companies.get(key).getMWs()+",";
+				System.out.println("\t\tTotal money spent: $"+companies.get(key).getMoneySpent());
+				writeString += companies.get(key).getMoneySpent()+",";
+				System.out.println("\t\tTotal PL for the month: $"+companies.get(key).getTotalPL());
+				writeString += companies.get(key).getTotalPL();
+			//	writeString += companies.get(key).getDailyPLs().toString(); //ArrayList of PLs for the month
+				bw2.write(writeString);
+				bw2.newLine();
+//				for(int i = 0; i < companyPaths.size(); i++)
+//					System.out.println("\t\t"+companyPaths.get(i).toString());
+//				if(x==5) break;
+			}
+			bw2.close();
+		}
 		else
 			System.out.println("End of program.");
-		
-		in.close();//System.in
+				
 	}
 	
-	public static void MonthlyReport_CompaniesPL(String file, Map <ftrPath, ArrayList<Double>> paths){
-		String ftrFile = "C:/ISONE/FTR_Positions/FTR_Bid_Results/"+file;		
-		BufferedReader br = null;
+	public static Map<String, Company> MonthlyReport_CompaniesPL(String file, Map <ftrPath, ArrayList<Double>> paths)
+	{			
+		String ftrFile = "C:/ISONE/FTR_Positions/FTR_Bid_Results/"+file;
+		Map<String, Company> companies = new HashMap<String, Company>();
+		BufferedReader br = null;		
+		@SuppressWarnings({ "unused", "resource" })
+		Scanner in = new Scanner(System.in);		
+		int sameCompany = 1;
 		String line = "";		
 		try {			 
-			br = new BufferedReader(new FileReader(ftrFile));			
-			while ((line = br.readLine()) != null) {	 
+			br = new BufferedReader(new FileReader(ftrFile));
+			br.readLine();//skipping first line that is just a header
+			Company prevComp = null; // will be used to move one step behind to finalize data for previous company when all its paths finished
+			while ((line = br.readLine()) != null) 
+			{	 
 			        // use comma as separator
-				String[] transaction  = line.split(",");	 
-				if(transaction[8].equals("BUY")) {             // Map keys can only be unique, so the paths will be unique
-					paths.put(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])),null);
+				String[] transaction  = line.split(",");
+				if(transaction[8].equals("BUY")) 
+				{
+					String companyName = transaction[1]; // second column in FTR Auction result file
+					String source = transaction[3];
+					String sink = transaction[5];
+					String type = transaction[7];				
+					double price = Double.parseDouble(transaction[10]);
+					double MWs = Double.parseDouble(transaction[9]);
+					double moneySpent = MWs * price;				
+					ftrPath incomingPath = new ftrPath(source, sink, type, price);
+					ArrayList<Double> dailyPathPLs = paths.get(incomingPath);				
+					Company company = companies.get(companyName); // is company in the Map already?				
+									
+					if(company == null)                      // if NO
+					{                     
+						if(prevComp != null)
+							prevComp.addTotalPL(dailyPathPLs);
+						company = new Company(companyName);					
+						companies.put(companyName, company);			// add company to map		
+						sameCompany = 1;					
+					}
+					else  									// if YES
+					{                                   
+						sameCompany = sameCompany + 1;    //counting number of paths of one company					
+					}	
+						
+					company.addPath(incomingPath);
+					company.addMWs(MWs);
+					company.addMoneySpent(moneySpent);
+					company.addTotalPL(dailyPathPLs);
+					prevComp = company;
 				}
-			}	 
+			}		 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -100,6 +181,7 @@ public class MonthlyPLbyCompany {
 				}
 			}
 		}	 
+		return companies;
 	}
 
 	public static ArrayList <ftrAuctionResFile> getAllFTRAuctionFiles() {
@@ -137,7 +219,7 @@ public class MonthlyPLbyCompany {
 			        // use comma as separator
 				String[] transaction  = line.split(",");	 
 				if(transaction[8].equals("BUY")) {             // Map keys can only be unique, so the paths will be unique
-					paths.put(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])),null);
+					paths.put(new ftrPath(transaction[3],transaction[5],transaction[7],Double.parseDouble(transaction[10])),new ArrayList<Double>());
 				}
 			}	 
 		} catch (FileNotFoundException e) {
@@ -167,7 +249,7 @@ public class MonthlyPLbyCompany {
 		        zzz++;
 		        System.out.print(fileName+"  ");
 		        if(zzz == 5) {System.out.println(); zzz=0;}
-		        getAllPathPricesForDay(fileName, paths);
+		        getAllPathPricesForDay(fileName, paths);		        
 		    }
 		} catch (IOException x) {
 		    System.err.println(x);
@@ -182,6 +264,7 @@ public class MonthlyPLbyCompany {
         int day = Integer.parseInt(fileName.substring(19,21));        
 		   ///// getting all paths prices for the day
 		Map<String, double[]> nodes_prices = new HashMap<String, double[]>();  // Map of all NODES with their prices for a day
+		@SuppressWarnings({ "unused", "resource" })
 		Scanner in = new Scanner(System.in);
 		BufferedReader inStream = new BufferedReader(new FileReader(fName));
 		String line = "";		
@@ -199,7 +282,7 @@ public class MonthlyPLbyCompany {
 		}
 		inStream.close();	
 
-		in.close();
+		//in.close();
 				
 		int xxx = 0;		
 		
@@ -251,7 +334,8 @@ public class MonthlyPLbyCompany {
 			}
 			sum = Math.round(sum*100)/100.0;		
 			//System.out.println(sum);
-			key.addDailyPL(sum); 
+			key.addDailyPL(sum);
+			paths.get(key).add(sum);
 		}
 		//System.out.println("name mismatches: "+xxx);
 		//System.out.println("============================================");

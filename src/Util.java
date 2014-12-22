@@ -32,4 +32,15 @@ public class Util
 			return true;					
 		return false;
 	}
+	
+	public static int getNumberOfDaysInMonth(int year, int month) {		
+		Calendar cal = new GregorianCalendar(year, month-1, 1);
+		return cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+	}
+	public static int getNumberOfDaysInMonth(String year, String month) { // overloading for different type of paramethers		
+		int yr = Integer.parseInt(year);
+		int mth = Integer.parseInt(month);
+		Calendar cal = new GregorianCalendar(yr, mth-1, 1);
+		return cal.getActualMaximum(Calendar.DAY_OF_MONTH);
+	}
 }
