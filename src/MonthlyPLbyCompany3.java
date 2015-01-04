@@ -9,7 +9,7 @@ import java.io.*;
 import java.util.*;
 import java.nio.file.*;
 
-public class MonthlyPLbyCompany {
+public class MonthlyPLbyCompany3 {
 
 	public static void main(String[] args) throws IOException 
 	{
@@ -17,29 +17,61 @@ public class MonthlyPLbyCompany {
 		System.out.println();
 		@SuppressWarnings("resource")
 		Scanner in = new Scanner(System.in);
-		String year;
-		String month;
+		
+		String year_start;
+		String year_end;
+		String month_start;
+		String month_end;
+		
 		boolean right;
 		do {
-			System.out.print("Input year [2011 - 2014]: ");
-			year = in.nextLine();
-			int y = Integer.parseInt(year);			
+			System.out.print("Input starting year [2011 - 2014]: ");
+			year_start = in.nextLine();
+			int y = Integer.parseInt(year_start);			
 			if(y < 2011 || y > 2014) {
 				System.out.println("Wrong year! Please re-input.\n");
 				right = false;
 			} else right = true;
 		} while(!right);
 		System.out.println();
+		
 		do {
-			System.out.print("Input month [1 - 12]: ");
-			month = in.nextLine();
-			int m = Integer.parseInt(month);
+			System.out.print("Input ending year [2011 - 2014]: ");
+			year_end = in.nextLine();
+			int y = Integer.parseInt(year_end);			
+			if(y < 2011 || y > 2014) {
+				System.out.println("Wrong year! Please re-input.\n");
+				right = false;
+			} else right = true;
+		} while(!right);
+		System.out.println();
+
+		do {
+			System.out.print("Input starting month [1 - 12]: ");
+			month_start = in.nextLine();
+			int m = Integer.parseInt(month_start);
 			if(m < 1 || m > 12) {
 				System.out.println("Wrong month! Please re-input.\n");
 				right = false;				
 			} else right = true;
 		} while(!right);
-		if(month.length() < 2) month = "0"+month;
+		if(month_start.length() < 2) month_start = "0"+month_start;
+		System.out.println();
+
+		do {
+			System.out.print("Input ending month [1 - 12]: ");
+			month_end = in.nextLine();
+			int m = Integer.parseInt(month_end);
+			if(m < 1 || m > 12) {
+				System.out.println("Wrong month! Please re-input.\n");
+				right = false;				
+			} else right = true;
+		} while(!right);
+		if(month_end.length() < 2) month_end = "0"+month_end;
+		System.out.println();
+		
+		String year = "2014"; ///////////////////////////
+		String month = "12";  //////////////////////////
 		
 		String requestedFtrFile = "";
 		ArrayList <ftrAuctionResFile> files = getAllFTRAuctionFiles();

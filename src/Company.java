@@ -6,7 +6,7 @@ public class Company
 	private double totalMWs;	
 	private double moneySpent;	
 	private double totalPL;	
-//	private ArrayList<Double> dailyPLs;
+	private ArrayList<Double> dailyPLs;
 	
 	public Company(String company) 
 	{	
@@ -15,7 +15,7 @@ public class Company
 		totalMWs = 0;
 		totalPL = 0;		
 		moneySpent = 0;	
-//		dailyPLs = new ArrayList<Double>();
+		dailyPLs = new ArrayList<Double>();
 	}
 		
 	public String getName() {
@@ -26,10 +26,10 @@ public class Company
 	}
 	public void addPath(ftrPath path) {
 		paths.add(path);
-//		dailyPLs.add(path.getPathTotalPL());
+		dailyPLs.add(path.getPathTotalPL());
 	}
 	public double getMWs() {
-		return Math.round(totalMWs);
+		return Math.round(totalMWs*100)/100.0;
 	}
 	public void addMWs(double mWs) {
 		totalMWs += mWs;
@@ -38,20 +38,20 @@ public class Company
 		moneySpent += money;
 	}	
 	public double getMoneySpent() {
-		return Math.round(moneySpent);
+		return Math.round(moneySpent*100)/100.0;
 	}
-	public void addTotalPL(ArrayList <Double> dailyPathPLs) {
+	public void addTotalPL(ArrayList <Double> dailyPathPLs, double MWs) {
 		double sum = 0;
 		for(int i = 0; i < dailyPathPLs.size(); i++)
 			sum += (double)dailyPathPLs.get(i);		
-		totalPL += sum;		
+		totalPL += sum * MWs;		
 	}
 	public double getTotalPL() {
-		return Math.round(totalPL);
+		return Math.round(totalPL*100)/100.0;
 	}
-//	public ArrayList<Double> getDailyPLs() {
-//		return dailyPLs;
-//	}
+	public ArrayList<Double> getDailyPLs() {
+		return dailyPLs;
+	}
 
 	@Override
 	public int hashCode() {
