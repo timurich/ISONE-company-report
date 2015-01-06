@@ -1,7 +1,9 @@
 /**
  * Calculate monthly PL for each market participant in ISO-NE
+ * Running for a long period over multiple years and producing CSV file reports (by company and by path)
  * @author Timur
- * Version 0.1
+ * Version 0.3
+ * Added node names in addition to node numbers (PNodeIDs)
  */
 
 //import java.io.FileWriter;
@@ -9,26 +11,27 @@ import java.io.*;
 import java.util.*;
 import java.nio.file.*;
 
-public class MonthlyPLbyCompany3 {
-
+public class MonthlyPLbyCompany3 
+{
 	public static void main(String[] args) throws IOException 
 	{
-		System.out.println("Report: Market Participants PL For a Certain Month.");
+		System.out.println("Report: Market Participants and Paths PL For a given period of time.");
 		System.out.println();
+		
+		createDirectoriesForReports();/////////////////////////////////////////
+		
 		@SuppressWarnings("resource")
 		Scanner in = new Scanner(System.in);
-		
 		String year_start;
 		String year_end;
 		String month_start;
 		String month_end;
-		
 		boolean right;
 		do {
-			System.out.print("Input starting year [2011 - 2014]: ");
+			System.out.print("Input starting year [2011 - 2015]: ");
 			year_start = in.nextLine();
 			int y = Integer.parseInt(year_start);			
-			if(y < 2011 || y > 2014) {
+			if(y < 2011 || y > 2015) {
 				System.out.println("Wrong year! Please re-input.\n");
 				right = false;
 			} else right = true;
@@ -36,10 +39,10 @@ public class MonthlyPLbyCompany3 {
 		System.out.println();
 		
 		do {
-			System.out.print("Input ending year [2011 - 2014]: ");
+			System.out.print("Input ending year [2011 - 2015]: ");
 			year_end = in.nextLine();
 			int y = Integer.parseInt(year_end);			
-			if(y < 2011 || y > 2014) {
+			if(y < 2011 || y > 2015) {
 				System.out.println("Wrong year! Please re-input.\n");
 				right = false;
 			} else right = true;
@@ -70,84 +73,86 @@ public class MonthlyPLbyCompany3 {
 		if(month_end.length() < 2) month_end = "0"+month_end;
 		System.out.println();
 		
-		String year = "2014"; ///////////////////////////
-		String month = "12";  //////////////////////////
-		
-		String requestedFtrFile = "";
-		ArrayList <ftrAuctionResFile> files = getAllFTRAuctionFiles();
-		for(int i = 0; i < files.size(); i++) {
-			if(files.get(i).getYear().equals(year) && files.get(i).getMonth().equals(month))
-				requestedFtrFile = files.get(i).getName();
-		}
-		System.out.println();
-		System.out.println("FTR Auction Result File : "+requestedFtrFile);
-		///////////////////Reading all paths for given month		
-		Map <ftrPath, ArrayList<Double>> paths = CreateListOfAllPathsFor1month(requestedFtrFile); // set of All unique paths for the month (FTR)		
-		System.out.println("\nNumber of unique paths for the month = "+paths.size());
-		
-		System.out.println("=========================================================");
-		CalculatePL_of_AllPathsForGivenMonth(year, month, paths);
-		System.out.println("=========================================================");
-		int temp = 0;
-		BufferedWriter bw = new BufferedWriter(new FileWriter("C:/ISONE/Monthly_Paths_PL.csv"));  
-		bw.write("sourceID,sinkID,Class,Price,Total P/L for month,");
-		int h = 0;
-		for(h = 1; h <= Util.getNumberOfDaysInMonth(year,month)-1; h++) bw.write("Day"+h+","); bw.write("Day"+h); //to avoid last comma)		
-		bw.newLine();
-		for(ftrPath key: paths.keySet()) {
-			if(key.getPathTotalPL()>50 && key.getPathTotalPL() / key.getFtrPrice() > 1.5) { // FILTER 
-				//System.out.println(key.toString()+", "+ key.getAllDaysPLstring()+"\t = "+ key.getPathTotalPL());
-			
-				ArrayList<Double> dailyPLs = key.getAllDaysPL();			
-				String writeString = "";
-				writeString += key.getSource() +","+ key.getSink()+","+key.getType()+","+key.getFtrPrice()+","+key.getPathTotalPL()+",";
-				for(int i = 0; i<dailyPLs.size(); i++)
-					writeString += dailyPLs.get(i)+",";				
-				bw.write(writeString.substring(0,writeString.length()-1));
-				bw.newLine();
-				temp++;
-			}
-						
-		}
-		bw.close();
-		System.out.println("Matching paths found: "+ temp);
-		System.out.println();
-		System.out.print("Report of all companies' P/L for this month? [y]es/[n]o ==> ");		
-		char ans = in.nextLine().charAt(0);
-		if(ans == 'Y' || ans == 'y') 
-		{
-			Map<String, Company> companies = MonthlyReport_CompaniesPL(requestedFtrFile, paths);			
-			int x = 0;
-			BufferedWriter bw2 = new BufferedWriter(new FileWriter("C:/ISONE/Monthly_Companies_PL_Report.csv"));
-			bw2.write("Company,# of paths,total MWs,Capital Spent,Total P/L");
-			bw2.newLine();
-			String writeString = "";
-			for(String key: companies.keySet()) 
-			{	
-				writeString = "";
-				System.out.println(++x+". "+key);
-				writeString += key+",";
-				ArrayList<ftrPath> companyPaths = companies.get(key).getPaths();
-				System.out.println("\t\tNumber of paths: "+companyPaths.size());
-				writeString += companyPaths.size()+",";
-				System.out.println("\t\tTotal MWs purchased: "+companies.get(key).getMWs());
-				writeString += companies.get(key).getMWs()+",";
-				System.out.println("\t\tTotal money spent: $"+companies.get(key).getMoneySpent());
-				writeString += companies.get(key).getMoneySpent()+",";
-				System.out.println("\t\tTotal PL for the month: $"+companies.get(key).getTotalPL());
-				writeString += companies.get(key).getTotalPL();
-			//	writeString += companies.get(key).getDailyPLs().toString(); //ArrayList of PLs for the month
-				bw2.write(writeString);
-				bw2.newLine();
-//				for(int i = 0; i < companyPaths.size(); i++)
-//					System.out.println("\t\t"+companyPaths.get(i).toString());
-//				if(x==5) break;
-			}
-			bw2.close();
-		}
-		else
-			System.out.println("End of program.");
+		String requestedFtrFile = "";		
+		ftrAuctionResFile [] files = getAllFTRAuctionFiles();		
+		System.out.println("FTR Auction Result Files:");
+		int zzz = 0;
+		for(int intYear = Integer.parseInt(year_start); intYear <= Integer.parseInt(year_end); intYear++)
+		{	
+			for(int intMonth = Integer.parseInt(month_start); intMonth <= Integer.parseInt(month_end); intMonth++)
+			{
+				String year = String.valueOf(intYear);
+				String month = String.valueOf(intMonth);
+				if(month.length() < 2) month = "0"+month;
+								
+				for(int i = 0; i < files.length; i++) {
+					if(files[i].getYear().equals(year) && files[i].getMonth().equals(month))						
+						requestedFtrFile = files[i].getName();					
+				}
 				
+				System.out.print(requestedFtrFile+", "); zzz++;				
+				if(zzz == 5) {System.out.println(); zzz=0; }
+				///////////////////Reading all paths for given month		
+				Map <ftrPath, ArrayList<Double>> paths = CreateListOfAllPathsFor1month(requestedFtrFile); // set of All unique paths for the month (FTR)		
+				//System.out.println("\nNumber of unique paths for the month = "+paths.size());
+				
+				//System.out.println("=========================================================");
+				CalculatePL_of_AllPathsForGivenMonth(year, month, paths);
+				//System.out.println("=========================================================");
+				@SuppressWarnings("unused")
+				int temp = 0;
+				String fNamePaths = "Monthly_Paths_PL_"+year+month+".csv";
+				
+				BufferedWriter bw = new BufferedWriter(new FileWriter("C:/ISONE/Bids/Reports/Monthly_Paths_PL/"+fNamePaths));  
+				bw.write("sourceID,sinkID,Class,Price,Total P/L for month,");
+				int h = 0;
+				for(h = 1; h <= Util.getNumberOfDaysInMonth(year,month)-1; h++) bw.write("Day"+h+","); bw.write("Day"+h); //to avoid last comma)		
+				bw.newLine();
+				for(ftrPath key: paths.keySet()) {
+					if(key.getPathTotalPL()>50 && key.getPathTotalPL() / key.getFtrPrice() > 1.5) { // FILTER 
+						//System.out.println(key.toString()+", "+ key.getAllDaysPLstring()+"\t = "+ key.getPathTotalPL());
+					
+						ArrayList<Double> dailyPLs = key.getAllDaysPL();			
+						String writeString = "";
+						writeString += key.getSource() +","+ key.getSink()+","+key.getType()+","+key.getFtrPrice()+","+key.getPathTotalPL()+",";
+						for(int i = 0; i<dailyPLs.size(); i++)
+							writeString += dailyPLs.get(i)+",";				
+						bw.write(writeString.substring(0,writeString.length()-1));
+						bw.newLine();
+						temp++;
+					}
+								
+				}
+				bw.close();
+				
+				Map<String, Company> companies = MonthlyReport_CompaniesPL(requestedFtrFile, paths);
+				
+				String fNameCompanies = "Monthly_Companies_PL_"+year+month+".csv";
+				BufferedWriter bw2 = new BufferedWriter(new FileWriter("C:/ISONE/Bids/Reports/Monthly_Companies_PL/"+fNameCompanies));
+				
+				bw2.write("Company,# of paths,total MWs,Capital Spent,Total P/L");
+				bw2.newLine();
+				String writeString = "";
+				for(String key: companies.keySet()) 
+				{	
+					writeString = "";					
+					writeString += key+",";
+					ArrayList<ftrPath> companyPaths = companies.get(key).getPaths();					
+					writeString += companyPaths.size()+",";					
+					writeString += companies.get(key).getMWs()+",";					
+					writeString += companies.get(key).getMoneySpent()+",";					
+					writeString += companies.get(key).getTotalPL();
+				//	writeString += companies.get(key).getDailyPLs().toString(); //ArrayList of PLs for the month
+					bw2.write(writeString);
+					bw2.newLine();
+	//				for(int i = 0; i < companyPaths.size(); i++)
+	//					System.out.println("\t\t"+companyPaths.get(i).toString());
+	//				if(x==5) break;
+				}
+				bw2.close();				
+			}			
+		}	
+		System.out.println("DONE!!!");
 	}
 	
 	public static Map<String, Company> MonthlyReport_CompaniesPL(String file, Map <ftrPath, ArrayList<Double>> paths)
@@ -215,26 +220,39 @@ public class MonthlyPLbyCompany3 {
 		return companies;
 	}
 
-	public static ArrayList <ftrAuctionResFile> getAllFTRAuctionFiles() {
-		Path dir = Paths.get("/ISONE/FTR_Positions/FTR_Bid_Results");
+	public static ftrAuctionResFile[] getAllFTRAuctionFiles() {
+		File dir = null;		
 		String fileName = "";
 		String year;
 		String month;
-		ArrayList <ftrAuctionResFile> files = new ArrayList <ftrAuctionResFile>();
-		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "Monthly_*")) {		    
-			for (Path entry: stream) {
-				
-		        fileName = entry.getFileName().toString();
-		        year = fileName.substring(8,12);
-		        month = fileName.substring(13,15);
-		        files.add(new ftrAuctionResFile(fileName, year, month));		        
-		    }
-		} catch (IOException x) {
-		    System.err.println(x);
-		}		
+		String [] files_ = null;
+		ftrAuctionResFile [] files = null;
 		
-		//for(int i = 0; i < files.size(); i++)
-		//	System.out.println(files.get(i).getName()+" -- "+files.get(i).getYear()+" -- "+files.get(i).getMonth());
+		try{
+			dir = new File("C:/ISONE/FTR_Positions/FTR_Bid_Results");
+			
+			FilenameFilter fileNameFilster = new FilenameFilter() {
+				@Override
+				public boolean accept(File dir, String name) {
+					if(name.substring(0,8).equals("Monthly_"))
+						return true;
+					
+					return false;
+				}
+			};
+			
+			files_ = dir.list(fileNameFilster);			
+			files = new ftrAuctionResFile[files_.length];		    
+			for (int i = 0; i < files_.length; i++) {				
+				fileName =files_[i];
+			    year = fileName.substring(8,12);
+			    month = fileName.substring(13,15);
+			    files[i]= new ftrAuctionResFile(fileName, year, month);		        
+			}			
+		} catch (Exception x) {
+			    x.printStackTrace();
+		}
+		
 		return files;
 	}
 	
@@ -264,28 +282,28 @@ public class MonthlyPLbyCompany3 {
 					e.printStackTrace();
 				}
 			}
-		}	 
+		}
+		
 		return paths;
 	}
-	
+
 	public static void CalculatePL_of_AllPathsForGivenMonth(String year, String month, Map<ftrPath, ArrayList<Double>> paths) {			
 			
 		Path dir = Paths.get("/ISONE/ISONE_DA_RT_FTR_Prices/Daily_DA_Prices");
 		String fileName = "";		
 		try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir, "WW_DALMP_ISO_"+year+month+"*")) {
-			int zzz = 0;
+			//int zzz = 0;
 			for (Path entry: stream) {				
 		        fileName = entry.getFileName().toString();
-		        zzz++;
-		        System.out.print(fileName+"  ");
-		        if(zzz == 5) {System.out.println(); zzz=0;}
+		       // zzz++;
+		       // System.out.print(fileName+"  ");
+		       // if(zzz == 5) {System.out.println(); zzz=0;}
 		        getAllPathPricesForDay(fileName, paths);		        
 		    }
-			stream.close();
 		} catch (IOException x) {
 		    System.err.println(x);
 		}		
-		System.out.println("\n");
+		//System.out.println("\n");
 	}
 	
 	public static void getAllPathPricesForDay(String fileName, Map<ftrPath, ArrayList<Double>> paths) throws IOException{		
@@ -370,5 +388,24 @@ public class MonthlyPLbyCompany3 {
 		}
 		//System.out.println("name mismatches: "+xxx);
 		//System.out.println("============================================");
+	}
+	
+	public static void createDirectoriesForReports() 
+	{
+		File fileCompaniesReport = new File("C:/ISONE/Bids/Reports/Monthly_Companies_PL");
+		File filePathsReport = new File("C:/ISONE/Bids/Reports/Monthly_Paths_PL");
+		boolean success = false;
+
+		if(fileCompaniesReport.exists()==false){
+			success = fileCompaniesReport.mkdir();
+			if(success == false)
+				success = fileCompaniesReport.mkdirs();
+		}
+
+		if(filePathsReport.exists()==false){
+			filePathsReport.mkdir();
+			if(success == false)
+				success = filePathsReport.mkdir();
+		}
 	}
 }
